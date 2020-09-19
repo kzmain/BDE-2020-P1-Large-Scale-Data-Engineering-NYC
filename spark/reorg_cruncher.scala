@@ -2,7 +2,21 @@ def reorg(datadir :String)
 {
   val t0 = System.nanoTime()
 
-  // nothing here (yet)
+    val person   = spark.read.format("csv").option("header", "true").option("delimiter", "|").option("inferschema", "true").
+                       load(datadir + "/person.*csv.*").cache()
+
+    person.write.format("parquet").save(datadir + "/person.parquet")
+    
+    val interest = spark.read.format("csv").option("header", "true").option("delimiter", "|").option("inferschema", "true").
+                       load(datadir + "/interest.*csv.*").cache()
+    
+    interest.write.format("parquet").save(datadir + "/interest.parquet")
+    
+//     val knows    = spark.read.format("csv").option("header", "true").option("delimiter", "|").option("inferschema", "true").
+//                        load(datadir + "/knows.*csv.*").cache()
+    
+//     knows.write.format("parquet").save(datadir + "/knows1.parquet")
+    
 
   val t1 = System.nanoTime()
   println("reorg time: " + (t1 - t0)/1000000 + "ms")
@@ -13,10 +27,18 @@ def cruncher(datadir :String, a1 :Int, a2 :Int, a3 :Int, a4 :Int, lo :Int, hi :I
    val t0 = System.nanoTime()
 
   // load the three tables
-  val person   = spark.read.format("csv").option("header", "true").option("delimiter", "|").option("inferschema", "true").
-                       load(datadir + "/person.*csv.*")
-  val interest = spark.read.format("csv").option("header", "true").option("delimiter", "|").option("inferschema", "true").
-                       load(datadir + "/interest.*csv.*")
+//   val person   = spark.read.parquet(datadir + "/person.*parquet*")
+    
+//   val interest = spark.read.parquet(datadir + "/interest.*parquet*")
+    
+//   val knows    = spark.read.parquet(datadir + "/knows.*parquet*")
+    
+val person   = spark.read.format("parquet").option("header", "true").option("delimiter", "|").option("inferschema", "true").
+                   load(datadir + "/person.parquet")
+
+val interest = spark.read.format("parquet").option("header", "true").option("delimiter", "|").option("inferschema", "true").
+                   load(datadir + "/interest.parquet")
+    
   val knows    = spark.read.format("csv").option("header", "true").option("delimiter", "|").option("inferschema", "true").
                        load(datadir + "/knows.*csv.*")
 
