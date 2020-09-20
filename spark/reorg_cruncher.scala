@@ -30,7 +30,7 @@ nknow1.write.format("parquet").save(datadir + "/knows.parquet")
 
 
 
-val person_list = nknows.select("personId").dropDuplicates("personId")
+val person_list = nknow1.select("personId").dropDuplicates("personId")
 person_list.cache()
 val nperson = person_list
     .join(person, "personId")
@@ -50,11 +50,6 @@ nperson.write.format("parquet").mode("overwrite").save(datadir + "/person.parque
                        load(datadir + "/interest.*csv.*").cache()
     
     interest.write.format("parquet").save(datadir + "/interest.parquet")
-    
-//     val knows    = spark.read.format("csv").option("header", "true").option("delimiter", "|").option("inferschema", "true").
-//                        load(datadir + "/knows.*csv.*").cache()
-    
-//     knows.write.format("parquet").save(datadir + "/knows1.parquet")
     
 
   val t1 = System.nanoTime()
