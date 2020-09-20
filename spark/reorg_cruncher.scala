@@ -1,114 +1,64 @@
 def reorg(datadir :String) 
 {
-  println("This is reorg 1")
   val t0 = System.nanoTime()
 
-  
-  val knows  = spark.read.format("csv").option("header", "true").option("delimiter", "|").option("inferschema", "true")
-                        .load(datadir + "/knows.*csv.*")
-
-  println("This is reorg 2")
-  var person   = spark.read.format("csv") .option("header", "true") .option("delimiter", "|")
-                    .option("inferschema", "true")
-                    .load(datadir + "/person.*csv.*")
-
-  knows.show()
-  person = person.select("personId", "birthday", "locatedIn")
-
-val loc_df = person.select("personId", "locatedIn")
-
-var nknows = knows
-.join(loc_df.withColumnRenamed("locatedIn", "ploc"),    "personId")
-.join(loc_df.withColumnRenamed("locatedIn", "floc")
-            .withColumnRenamed("personId", "friendId"), "friendId")
-.filter($"ploc" === $"floc")
-.select("personId", "friendId").cache()
-
-nknows = nknows
-.join(nknows.withColumnRenamed("friendId", "validation")
-            .withColumnRenamed("personId", "friendId"), "friendId")
-.filter($"personId" === $"validation")
-.select("personId", "friendId")
-.groupBy("personId").agg(collect_list("friendId").as("friendId")).cache()
-
-val person_list = nknows.select("personId").dropDuplicates("personId").cache()
-
-var nperson = nknows
-    .join(person, "personId")
-    .withColumn("bday", month($"birthday")*100 + dayofmonth($"birthday"))
-    .drop("birthday")
-    .drop("locatedIn")
-    .withColumnRenamed("bday", "birthday")
-
-nperson.write.format("parquet").mode("overwrite").save(datadir + "/person.parquet")
-
-person.unpersist()
-nknows.unpersist()
-nperson.unpersist()
-
-val interest  = spark.read.format("csv")
-                        .option("header", "true")
-                        .option("delimiter", "|")
-                        .option("inferschema", "true")
-                        .load(datadir + "/interest.*csv.*").cache()
-
-var ninterest = interest.join(person_list, "personId")
-.groupBy("interest")
-.agg(collect_list("personId").as("personId"))
-
-ninterest.write.format("parquet").mode("overwrite").save(datadir + "/interest.parquet")
-
-
+  println("reorg time: ms")
+  // load the three tables
+  val person   = spark.read.format("csv").option("header", "true").option("delimiter", "|").option("inferschema", "true").
+                       load(datadir + "/person.*csv.*")
+  val interest = spark.read.format("csv").option("header", "true").option("delimiter", "|").option("inferschema", "true").
+                       load(datadir + "/interest.*csv.*")
+  val knows    = spark.read.format("csv").option("header", "true").option("delimiter", "|").option("inferschema", "true").
+                       load(datadir + "/knows.*csv.*")
   val t1 = System.nanoTime()
   println("reorg time: " + (t1 - t0)/1000000 + "ms")
 }
 
 def cruncher(datadir :String, a1 :Int, a2 :Int, a3 :Int, a4 :Int, lo :Int, hi :Int) :org.apache.spark.sql.DataFrame =
 {
-  println("This is cruncher 1")
    val t0 = System.nanoTime()
 
-  val interest = spark.read.format("parquet").load(datadir + "/interest.parquet").cache()
-val person   = spark.read.format("parquet").load(datadir + "/person.parquet").cache()
-
-// Filter Person between birthdays
-var target = person
-.filter($"birthday" >= lo && $"birthday" <= hi)
-.drop("birthday")
-.withColumn("friendId", explode($"friendId"))
-
-// Filter Friend not like a1 
-import org.apache.spark.sql.functions._
-val like_a1 = interest
-                .filter($"interest" === a1)
-                .withColumn("personId", explode($"personId"))
-                .withColumnRenamed("personId", "pid")
-                .withColumn("fan", lit(true)).drop("interest").cache()
-
-target = target.join(like_a1, target("friendId") === like_a1("pid"), "left_outer")
-                .filter($"fan")
-                .drop("fan")
-                .drop("pid")
-
-// Filter Person like a1 
-target = target.join(like_a1, target("personId") === like_a1("pid"), "left_outer")
-                .filter($"fan".isNull)
-                .drop("fan")
-                .drop("pid").cache()
+  // load the three tables
+  val person   = spark.read.format("csv").option("header", "true").option("delimiter", "|").option("inferschema", "true").
+                       load(datadir + "/person.*csv.*")
+  val interest = spark.read.format("csv").option("header", "true").option("delimiter", "|").option("inferschema", "true").
+                       load(datadir + "/interest.*csv.*")
+  val knows    = spark.read.format("csv").option("header", "true").option("delimiter", "|").option("inferschema", "true").
+                       load(datadir + "/know1s.*csv.*")
 
   // select the relevant (personId, interest) tuples, and add a boolean column "nofan" (true iff this is not a a1 tuple)
-  val score    = interest.filter($"interest" isin (a2, a3, a4))
-                .withColumn("personId", explode($"personId"))
-                        .groupBy("personId")
-                        .agg(count("personId") as "score")
-                        .cache()
+  val focus    = interest.filter($"interest" isin (a1, a2, a3, a4)).
+                          withColumn("nofan", $"interest".notEqual(a1))
 
-val ret = target.join(score, "personId")
-.select($"score", $"personId".alias("p"), $"friendId".alias("f"))
-.orderBy(desc("score"), asc("p"), asc("f"))
-  // val ret      = bidir.select($"p", $"f", $"score").orderBy(desc("score"), asc("p"), asc("f"))
+  // compute person score (#relevant interests): join with focus, groupby & aggregate. Note: nofan=true iff person does not like a1
+  val scores   = person.join(focus, "personId").
+                        groupBy("personId", "locatedIn", "birthday").
+                        agg(count("personId") as "score", min("nofan") as "nofan")
 
-  // ret.show(1000) // force execution now, and display results to stdout
+  // filter (personId, score, locatedIn) tuples with score>1, being nofan, and having the right birthdate
+  val cands    = scores.filter($"score" > 0 && $"nofan").
+                        withColumn("bday", month($"birthday")*100 + dayofmonth($"birthday")).
+                        filter($"bday" >= lo && $"bday" <= hi)
+
+  // create (personId, ploc, friendId, score) pairs by joining with knows (and renaming locatedIn into ploc)
+  val pairs    = cands.select($"personId", $"locatedIn".alias("ploc"), $"score").
+                       join(knows, "personId")
+
+  // re-use the scores dataframe to create a (friendId, floc) dataframe of persons who are a fan (not nofan)
+  val fanlocs  = scores.filter(!$"nofan").select($"personId".alias("friendId"), $"locatedIn".alias("floc"))
+
+  // join the pairs to get a (personId, ploc, friendId, floc, score), and then filter on same location, and remove ploc and floc columns
+  val results  = pairs.join(fanlocs, "friendId").
+                       filter($"ploc"===$"floc").
+                       select($"personId".alias("p"), $"friendId".alias("f"), $"score")
+
+  // do the bidirectionality check by joining towards knows, and keeping only the (p, f, score) pairs where also f knows p
+  val bidir    = results.join(knows.select($"personId".alias("f"), $"friendId"), "f").filter($"p"===$"friendId")
+
+  // keep only the (p, f, score) columns and sort the result
+  val ret      = bidir.select($"p", $"f", $"score").orderBy(desc("score"), asc("p"), asc("f"))
+
+  ret.show(1000) // force execution now, and display results to stdout
 
   val t1 = System.nanoTime()
   println("cruncher time: " + (t1 - t0)/1000000 + "ms")
