@@ -3,17 +3,16 @@ def reorg(datadir :String)
   println("This is reorg 1")
   val t0 = System.nanoTime()
 
-  val person = spark.read.format("csv")
-                    .option("header", "true")
-                    .option("delimiter", "|")
+  
+  val knows  = spark.read.format("csv").option("header", "true").option("delimiter", "|").option("inferschema", "true")
+                        .load(datadir + "/knows.*csv.*")
+
+  println("This is reorg 2")
+  var person   = spark.read.format("csv") .option("header", "true") .option("delimiter", "|")
                     .option("inferschema", "true")
                     .load(datadir + "/person.*csv.*")
-                    .select("personId", "birthday", "locatedIn")
-val knows  = spark.read.format("csv")
-                        .option("header", "true")
-                        .option("delimiter", "|")
-                        .option("inferschema", "true")
-                        .load(datadir + "/knows.*csv.*")
+  person = person.select("personId", "birthday", "locatedIn")
+
 val loc_df = person.select("personId", "locatedIn")
 
 var nknows = knows
