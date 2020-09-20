@@ -44,7 +44,7 @@ def reorg(datadir :String)
     .drop("locatedIn")
     .withColumnRenamed("bday", "birthday")
 
-  nperson.write.format("parquet").mode("overwrite").save("person.parquet")
+  nperson.write.format("parquet").mode("overwrite").save(datadir + "nperson.parquet")
 
   person.unpersist()
   nknows.unpersist()
@@ -60,7 +60,7 @@ def reorg(datadir :String)
   .groupBy("interest")
   .agg(collect_list("personId").as("personId"))
 
-  ninterest.write.format("parquet").mode("overwrite").save("interest.parquet")
+  ninterest.write.format("parquet").mode("overwrite").save(datadir + "ninterest.parquet")
   
 
   val t1 = System.nanoTime()
@@ -71,8 +71,8 @@ def cruncher(datadir :String, a1 :Int, a2 :Int, a3 :Int, a4 :Int, lo :Int, hi :I
 {
    val t0 = System.nanoTime()
 
-  val interest = spark.read.format("parquet").load("interest.parquet").cache()
-  val person   = spark.read.format("parquet").load("person.parquet").cache()
+  val interest = spark.read.format("parquet").load(datadir + "ninterest.parquet").cache()
+  val person   = spark.read.format("parquet").load(datadir + "nperson.parquet").cache()
 
   // Filter Person between birthdays
 var target = person
