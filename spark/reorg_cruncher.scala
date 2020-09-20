@@ -11,6 +11,8 @@ def reorg(datadir :String)
   var person   = spark.read.format("csv") .option("header", "true") .option("delimiter", "|")
                     .option("inferschema", "true")
                     .load(datadir + "/person.*csv.*")
+
+  knows.show()
   person = person.select("personId", "birthday", "locatedIn")
 
 val loc_df = person.select("personId", "locatedIn")
