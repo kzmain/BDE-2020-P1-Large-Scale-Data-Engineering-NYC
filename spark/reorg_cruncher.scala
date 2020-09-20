@@ -2,54 +2,31 @@ def reorg(datadir :String)
 {
   val t0 = System.nanoTime()
 
-    val person   = spark.read.format("csv").option("header", "true").option("delimiter", "|").option("inferschema", "true").
+    val person = spark.read.format("csv").option("header", "true").option("delimiter", "|").option("inferschema", "true").
                        load(datadir + "/person.*csv.*").cache()
-
-    val knows    = spark.read.format("csv").option("header", "true").option("delimiter", "|").option("inferschema", "true").
+    val knows  = spark.read.format("csv").option("header", "true").option("delimiter", "|").option("inferschema", "true").
                        load(datadir + "/knows.*csv.*")
-    
-    val loc_df   = person.select("personId", "locatedIn").cache()
+    val loc_df = person.select("personId", "locatedIn").cache()
 
-    val nknows = knows
-.join(loc_df.withColumnRenamed("locatedIn", "ploc"),    "personId")
+    val knows1 = knows.join(loc_df.withColumnRenamed("locatedIn", "ploc"),    "personId")
 .join(loc_df.withColumnRenamed("locatedIn", "floc")
             .withColumnRenamed("personId", "friendId"), "friendId")
 .filter($"ploc" === $"floc")
 .select("personId", "friendId")
 
-    val nknow1 = nknows
-.join(nknows.withColumnRenamed("friendId", "validation")
-            .withColumnRenamed("personId", "friendId"), "friendId")
-.filter($"personId" === $"validation")
-.select("personId", "friendId")
+knows1.write.format("parquet").save(datadir + "/knows.parquet")
 
-nknow1.write.format("parquet").save(datadir + "/knows.parquet")
-
-
-
-
-
-
-val person_list = nknow1.select("personId").dropDuplicates("personId")
-person_list.cache()
-val nperson = person_list
-    .join(person, "personId")
-    .withColumn("bday", month($"birthday")*100 + dayofmonth($"birthday"))
-    .drop("birthday")
-    .drop("locatedIn")
-    .withColumnRenamed("bday", "birthday")
-
-nperson.write.format("parquet").mode("overwrite").save(datadir + "/person.parquet")
-
-
-
-
-
-
+    person.write.format("parquet").save(datadir + "/person.parquet")
+    
     val interest = spark.read.format("csv").option("header", "true").option("delimiter", "|").option("inferschema", "true").
                        load(datadir + "/interest.*csv.*").cache()
     
     interest.write.format("parquet").save(datadir + "/interest.parquet")
+    
+//     val knows    = spark.read.format("csv").option("header", "true").option("delimiter", "|").option("inferschema", "true").
+//                        load(datadir + "/knows.*csv.*").cache()
+    
+//     knows.write.format("parquet").save(datadir + "/knows1.parquet")
     
 
   val t1 = System.nanoTime()
@@ -72,12 +49,9 @@ val person   = spark.read.format("parquet").option("header", "true").option("del
 
 val interest = spark.read.format("parquet").option("header", "true").option("delimiter", "|").option("inferschema", "true").
                    load(datadir + "/interest.parquet")
-
- val knows   = spark.read.format("parquet").option("header", "true").option("delimiter", "|").option("inferschema", "true").
-                   load(datadir + "/knows.parquet")
     
-  // val knows    = spark.read.format("csv").option("header", "true").option("delimiter", "|").option("inferschema", "true").
-  //                      load(datadir + "/knows.*csv.*")
+  val knows    = spark.read.format("csv").option("header", "true").option("delimiter", "|").option("inferschema", "true").
+                       load(datadir + "/knows.parquet")
 
   // select the relevant (personId, interest) tuples, and add a boolean column "nofan" (true iff this is not a a1 tuple)
   val focus    = interest.filter($"interest" isin (a1, a2, a3, a4)).
