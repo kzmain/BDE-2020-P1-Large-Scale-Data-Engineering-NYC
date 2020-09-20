@@ -22,10 +22,10 @@ def reorg(datadir :String)
     $"ploc"===$"floc").cache
   loc_know.select($"personId",$"birthday").distinct.write.format("csv").save(datadir+"/new_person")  
   
-  val new_know=loc_know.select($"personId",$"friendId").distinct
+  val new_know=loc_know.select($"personId",$"friendId").distinct.cache
   new_know.write.format("csv").save(datadir+"/new_knows")
   
-  val interest_loc=loc_know.join(interest,"personId")
+  val interest_loc=loc_know.join(interest,"personId").cache
   val new_interest=interest_loc.select($"personId",$"interest").distinct.write.format("csv").save(datadir+"/new_interest")
   new_interest.write.format("csv").save(datadir+"/new_interest")
   
@@ -74,8 +74,12 @@ def cruncher(datadir :String, a1 :Int, a2 :Int, a3 :Int, a4 :Int, lo :Int, hi :I
                           withColumn("nofan", $"interest".notEqual(a1))
 
   // compute person score (#relevant interests): join with focus, groupby & aggregate. Note: nofan=true iff person does not like a1
+  //val scores   = person.join(focus, "personId").
+  //                      groupBy("personId", "locatedIn", "birthday").
+  //                      agg(count("personId") as "score", min("nofan") as "nofan")
+  
   val scores   = person.join(focus, "personId").
-                        groupBy("personId", "locatedIn", "birthday").
+                        groupBy("personId", "birthday").
                         agg(count("personId") as "score", min("nofan") as "nofan")
 
   // filter (personId, score, locatedIn) tuples with score>1, being nofan, and having the right birthdate
