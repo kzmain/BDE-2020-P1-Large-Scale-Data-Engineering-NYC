@@ -1,10 +1,8 @@
-var interests: org.apache.spark.sql.DataFrame;
-var persons  : org.apache.spark.sql.DataFrame;
-
 def reorg(datadir :String) 
 {
   val t0 = System.nanoTime()
 
+  printf("It goes here 1")
   val person = spark.read.format("csv")
                     .option("header", "true")
                     .option("delimiter", "|")
@@ -20,7 +18,7 @@ def reorg(datadir :String)
   
   val loc_df = person.select("personId", "locatedIn").cache()
 
-
+printf("It goes here 2")
   var nknows = knows
   .join(loc_df.withColumnRenamed("locatedIn", "ploc"),    "personId")
   .join(loc_df.withColumnRenamed("locatedIn", "floc")
@@ -28,12 +26,16 @@ def reorg(datadir :String)
   .filter($"ploc" === $"floc")
   .select("personId", "friendId").cache()
 
+printf("It goes here 3")
+
   nknows = nknows
   .join(nknows.withColumnRenamed("friendId", "validation")
               .withColumnRenamed("personId", "friendId"), "friendId")
   .filter($"personId" === $"validation")
   .select("personId", "friendId")
   .groupBy("personId").agg(collect_list("friendId").as("friendId")).cache()
+
+printf("It goes here 4")
 
   val person_list = nknows.select("personId").dropDuplicates("personId").cache()
 
@@ -45,6 +47,8 @@ def reorg(datadir :String)
     .withColumnRenamed("bday", "birthday")
 
   nperson.write.format("parquet").mode("overwrite").save(datadir + "nperson.parquet")
+
+printf("It goes here 5")
 
   person.unpersist()
   nknows.unpersist()
