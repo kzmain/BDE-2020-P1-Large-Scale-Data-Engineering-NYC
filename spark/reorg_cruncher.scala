@@ -2,18 +2,18 @@ def reorg(datadir :String)
 {
   val t0 = System.nanoTime()
 
-//    val person   = spark.read.format("csv").option("header", "true").option("delimiter", "|").option("inferschema", "true").
-//                       load(datadir + "/person.*csv.*").cache()
+    val person   = spark.read.format("csv").option("header", "true").option("delimiter", "|").option("inferschema", "true").
+                      load(datadir + "/person.*csv.*").cache()
 
 //    person.write.format("parquet").save(datadir + "/person.parquet")
     
-//    val interest = spark.read.format("csv").option("header", "true").option("delimiter", "|").option("inferschema", "true").
-//                       load(datadir + "/interest.*csv.*").cache()
+    val interest = spark.read.format("csv").option("header", "true").option("delimiter", "|").option("inferschema", "true").
+                       load(datadir + "/interest.*csv.*").cache()
     
 //    interest.write.format("parquet").save(datadir + "/interest.parquet")
     
-//     val knows    = spark.read.format("csv").option("header", "true").option("delimiter", "|").option("inferschema", "true").
-//                        load(datadir + "/knows.*csv.*").cache()
+     val knows    = spark.read.format("csv").option("header", "true").option("delimiter", "|").option("inferschema", "true").
+                        load(datadir + "/knows.*csv.*").cache()
     
 //     knows.write.format("parquet").save(datadir + "/knows1.parquet")
 
