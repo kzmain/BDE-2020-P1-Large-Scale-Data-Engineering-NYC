@@ -25,14 +25,14 @@ def reorg(datadir :String)
   val new_know=loc_know.select($"personId",$"friendId").distinct.cache()
  // new_know.write.format("csv").save(datadir+"/new_knows")
   
-  val interest_loc=loc_know.join(interest,"personId").cache()
-  val new_interest=interest_loc.select($"personId",$"interest").distinct.write.format("csv").save(datadir+"/new_interest")
+//  val interest_loc=loc_know.join(interest,"personId").cache()
+//  val new_interest=interest_loc.select($"personId",$"interest").distinct.write.format("csv").save(datadir+"/new_interest")
   
   
   
   loc_know.select($"personId",$"birthday").distinct.write.format("csv").save(datadir+"/new_person")
   new_know.write.format("csv").save(datadir+"/new_knows")
-  new_interest.write.format("csv").save(datadir+"/new_interest")
+  interest.write.format("csv").save(datadir+"/new_interest")
   
 
   val t1 = System.nanoTime()
