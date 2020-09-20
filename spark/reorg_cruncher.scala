@@ -57,10 +57,16 @@ def cruncher(datadir :String, a1 :Int, a2 :Int, a3 :Int, a4 :Int, lo :Int, hi :I
                        load(datadir + "/knows.*csv.*")
 
   
-  val person=spark.read.option("header", "false").csv(datadir+"/new_person").toDF("personId","birthday")
-  val interest=spark.read.option("header", "false").csv(datadir+"/new_interest").toDF("personId","interest")
-  val knows=spark.read.option("header", "false").csv(datadir+"/new_knows").toDF("personId","friendId") 
+ // val person=spark.read.option("header", "false").csv(datadir+"/new_person").toDF("personId","birthday")
+ // val interest=spark.read.option("header", "false").csv(datadir+"/new_interest").toDF("personId","interest")
+ //val knows=spark.read.option("header", "false").csv(datadir+"/new_knows").toDF("personId","friendId") 
   
+  val person   = spark.read.format("csv").option("header", "true").option("delimiter", "|").option("inferschema", "true").
+                       load(datadir + "/new_person.*csv.*")
+  val interest = spark.read.format("csv").option("header", "true").option("delimiter", "|").option("inferschema", "true").
+                       load(datadir + "/new_interest.*csv.*")
+  val knows    = spark.read.format("csv").option("header", "true").option("delimiter", "|").option("inferschema", "true").
+                       load(datadir + "/new_knows.*csv.*")
   
  
   // select the relevant (personId, interest) tuples, and add a boolean column "nofan" (true iff this is not a a1 tuple)
