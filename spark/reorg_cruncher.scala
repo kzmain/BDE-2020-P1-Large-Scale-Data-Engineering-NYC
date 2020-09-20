@@ -48,13 +48,13 @@ def cruncher(datadir :String, a1 :Int, a2 :Int, a3 :Int, a4 :Int, lo :Int, hi :I
   
   
 //val person   = spark.read.format("parquet").option("header", "true").option("delimiter", "|").option("inferschema", "true").
-                   load(datadir + "/person.parquet")
+//                   load(datadir + "/person.parquet")
 
 //val interest = spark.read.format("parquet").option("header", "true").option("delimiter", "|").option("inferschema", "true").
-                   load(datadir + "/interest.parquet")
+//                   load(datadir + "/interest.parquet")
     
 // val knows    = spark.read.format("csv").option("header", "true").option("delimiter", "|").option("inferschema", "true").
-                       load(datadir + "/knows.*csv.*")
+ //                      load(datadir + "/knows.*csv.*")
 
   
  // val person=spark.read.option("header", "false").csv(datadir+"/new_person").toDF("personId","birthday")
