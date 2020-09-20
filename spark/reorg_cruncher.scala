@@ -2,31 +2,36 @@ def reorg(datadir :String)
 {
   val t0 = System.nanoTime()
 
-    val person   = spark.read.format("csv").option("header", "true").option("delimiter", "|").option("inferschema", "true").
-                      load(datadir + "/person.*csv.*").cache()
+  val person   = spark.read.format("csv").option("header", "true").option("delimiter", "|").option("inferschema", "true").
+                      load(datadir + "/person.*csv.*")
 
 //    person.write.format("parquet").save(datadir + "/person.parquet")
     
-    val interest = spark.read.format("csv").option("header", "true").option("delimiter", "|").option("inferschema", "true").
-                       load(datadir + "/interest.*csv.*").cache()
+  val interest = spark.read.format("csv").option("header", "true").option("delimiter", "|").option("inferschema", "true").
+                       load(datadir + "/interest.*csv.*")
     
 //    interest.write.format("parquet").save(datadir + "/interest.parquet")
     
-     val knows    = spark.read.format("csv").option("header", "true").option("delimiter", "|").option("inferschema", "true").
-                        load(datadir + "/knows.*csv.*").cache()
+  val knows   = spark.read.format("csv").option("header", "true").option("delimiter", "|").option("inferschema", "true").
+                        load(datadir + "/knows.*csv.*")
     
 //     knows.write.format("parquet").save(datadir + "/knows1.parquet")
 
-  
-  val loc_know=knows.join(person.select($"personId",$"locatedIn".alias("ploc"),$"birthday"),"personId").join(person.select($"personId".alias("friendId"),$"locatedIn".alias("floc")),"friendId").filter(
+  val know_each=knows.join(knows.select($"personId".alias("friendId"),$"friendId".alias("f")),"friendId").filter($"f"===$"personId")
+  val loc_know=know_each.join(person.select($"personId",$"locatedIn".alias("ploc"),$"birthday"),"personId").join(person.select($"personId".alias("friendId"),$"locatedIn".alias("floc")),"friendId").filter(
     $"ploc"===$"floc").cache()
-  loc_know.select($"personId",$"birthday").distinct.write.format("csv").save(datadir+"/new_person")  
+//  loc_know.select($"personId",$"birthday").distinct.write.format("csv").save(datadir+"/new_person")  
   
   val new_know=loc_know.select($"personId",$"friendId").distinct.cache()
-  new_know.write.format("csv").save(datadir+"/new_knows")
+ // new_know.write.format("csv").save(datadir+"/new_knows")
   
   val interest_loc=loc_know.join(interest,"personId").cache()
   val new_interest=interest_loc.select($"personId",$"interest").distinct.write.format("csv").save(datadir+"/new_interest")
+  
+  
+  
+  loc_know.select($"personId",$"birthday").distinct.write.format("csv").save(datadir+"/new_person")
+  new_know.write.format("csv").save(datadir+"/new_knows")
   new_interest.write.format("csv").save(datadir+"/new_interest")
   
 
