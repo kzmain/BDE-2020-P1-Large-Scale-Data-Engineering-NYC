@@ -21,7 +21,7 @@ nknows = nknows
 .filter($"personId" === $"validation")
 .select("personId", "friendId")
 
-nknows.write.format("parquet").mode("overwrite").save("knows.parquet")
+nknows.write.format("parquet").mode("overwrite").save(datadir + "knows.parquet")
 
 val person_list = nknows.select("personId").dropDuplicates("personId")
 person_list.cache()
