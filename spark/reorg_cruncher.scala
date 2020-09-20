@@ -19,13 +19,13 @@ def reorg(datadir :String)
 
   
   val loc_know=knows.join(person.select($"personId",$"locatedIn".alias("ploc"),$"birthday"),"personId").join(person.select($"personId".alias("friendId"),$"locatedIn".alias("floc")),"friendId").filter(
-    $"ploc"===$"floc").cache
+    $"ploc"===$"floc").cache()
   loc_know.select($"personId",$"birthday").distinct.write.format("csv").save(datadir+"/new_person")  
   
-  val new_know=loc_know.select($"personId",$"friendId").distinct.cache
+  val new_know=loc_know.select($"personId",$"friendId").distinct.cache()
   new_know.write.format("csv").save(datadir+"/new_knows")
   
-  val interest_loc=loc_know.join(interest,"personId").cache
+  val interest_loc=loc_know.join(interest,"personId").cache()
   val new_interest=interest_loc.select($"personId",$"interest").distinct.write.format("csv").save(datadir+"/new_interest")
   new_interest.write.format("csv").save(datadir+"/new_interest")
   
