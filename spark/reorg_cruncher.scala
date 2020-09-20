@@ -21,7 +21,7 @@ nknows = nknows
 .filter($"personId" === $"validation")
 .select("personId", "friendId")
 
-nknows.write.format("parquet").mode("overwrite").save(datadir + "knows.parquet")
+nknows.write.format("parquet").save(datadir + "knows.parquet")
 
 val person_list = nknows.select("personId").dropDuplicates("personId")
 person_list.cache()
@@ -33,7 +33,7 @@ var nperson = person_list
     .drop("locatedIn")
     .withColumnRenamed("bday", "birthday")
 
-nperson.write.format("parquet").mode("overwrite").save(datadir + "/person.parquet")
+nperson.write.format("parquet").save(datadir + "/person.parquet")
 
 
 val interest  = spark.read.format("csv")
@@ -44,7 +44,7 @@ val interest  = spark.read.format("csv")
 
 var ninterest = interest.join(person_list, "personId")
 
-ninterest.write.format("parquet").mode("overwrite").save(datadir + "/interest.parquet")
+ninterest.write.format("parquet").save(datadir + "/interest.parquet")
 
   val t1 = System.nanoTime()
   println("reorg time: " + (t1 - t0)/1000000 + "ms")
