@@ -40,8 +40,20 @@ var nperson = nknows
     .drop("locatedIn")
     .withColumnRenamed("bday", "birthday")
 
-    nperson.write.format("parquet").mode("overwrite").save("person.parquet")
+    nperson.write.format("parquet").mode("overwrite").save(datadir + "person.parquet")
 println("This is reorg 5")
+
+val interest  = spark.read.format("csv")
+                        .option("header", "true")
+                        .option("delimiter", "|")
+                        .option("inferschema", "true")
+                        .load(datadir + "/interest.*csv.*")
+
+ninterest.write.format("parquet").mode("overwrite").save(datadir + "interest.parquet")
+
+ var ninterest = interest.join(person_list, "personId")
+
+
   val t1 = System.nanoTime()
   println("reorg time: " + (t1 - t0)/1000000 + "ms")
 }
