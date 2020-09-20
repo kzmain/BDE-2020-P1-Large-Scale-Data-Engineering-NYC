@@ -86,7 +86,7 @@ def cruncher(datadir :String, a1 :Int, a2 :Int, a3 :Int, a4 :Int, lo :Int, hi :I
   
   // re-use the scores dataframe to create a (friendId, floc) dataframe of persons who are a fan (not nofan)
   //val fanlocs  = scores.filter(!$"nofan").select($"personId".alias("friendId"), $"locatedIn".alias("floc"))
- val fanlocs  = scores.filter(!$"nofan").select($"personId".alias("friendId")
+ val fanlocs  = scores.filter(!$"nofan").select($"personId".alias("friendId"))
   
   
   // join the pairs to get a (personId, ploc, friendId, floc, score), and then filter on same location, and remove ploc and floc columns
