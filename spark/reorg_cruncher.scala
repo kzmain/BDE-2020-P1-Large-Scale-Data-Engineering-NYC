@@ -1,6 +1,6 @@
-
 def reorg(datadir :String) 
 {
+  println("This is reorg 1")
   val t0 = System.nanoTime()
 
   val person = spark.read.format("csv")
@@ -15,14 +15,14 @@ val knows  = spark.read.format("csv")
                         .option("inferschema", "true")
                         .load(datadir + "/knows.*csv.*")
 val loc_df = person.select("personId", "locatedIn").cache()
-
+println("This is reorg 2")
 var nknows = knows
 .join(loc_df.withColumnRenamed("locatedIn", "ploc"),    "personId")
 .join(loc_df.withColumnRenamed("locatedIn", "floc")
             .withColumnRenamed("personId", "friendId"), "friendId")
 .filter($"ploc" === $"floc")
 .select("personId", "friendId")
-
+println("This is reorg 3")
 
 nknows = nknows
 .join(nknows.withColumnRenamed("friendId", "validation")
@@ -30,7 +30,7 @@ nknows = nknows
 .filter($"personId" === $"validation")
 .select("personId", "friendId")
 .groupBy("personId").agg(collect_list("friendId").as("friendId"))
-
+println("This is reorg 4")
 val person_list = nknows.select("personId").dropDuplicates("personId").cache()
 
 var nperson = nknows
@@ -41,13 +41,14 @@ var nperson = nknows
     .withColumnRenamed("bday", "birthday")
 
     nperson.write.format("parquet").mode("overwrite").save("person.parquet")
-
+println("This is reorg 5")
   val t1 = System.nanoTime()
   println("reorg time: " + (t1 - t0)/1000000 + "ms")
 }
 
 def cruncher(datadir :String, a1 :Int, a2 :Int, a3 :Int, a4 :Int, lo :Int, hi :Int) :org.apache.spark.sql.DataFrame =
 {
+  println("This is cruncher 1")
    val t0 = System.nanoTime()
 
   // // load the three tables
