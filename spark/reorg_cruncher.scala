@@ -27,7 +27,7 @@ def reorg(datadir :String)
   
   val interest_loc=loc_know.join(interest,"personId")
   val new_interest=interest_loc.select($"personId",$"interest").distinct.write.format("csv").save(datadir+"/new_interest")
- 
+  new_interest.write.format("csv").save(datadir+"/new_interest")
   
 
   val t1 = System.nanoTime()
