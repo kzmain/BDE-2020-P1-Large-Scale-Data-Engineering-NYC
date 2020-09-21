@@ -3,18 +3,33 @@ def reorg(datadir :String)
   val t0 = System.nanoTime()
 
     val person = spark.read.format("csv").option("header", "true").option("delimiter", "|").option("inferschema", "true").
-                       load(datadir + "/person.*csv.*").cache()
+                       load(datadir + "/person.*csv.*")
+                       .drop("firstName")
+                       .drop("lastName")
+                       .drop("gender")
+                       .drop("creationDate")
+                       .drop("locationIP")
+                       .drop("browserUsed")
+                       .withColumn("bday", month($"birthday")*100 + dayofmonth($"birthday")).drop("birthday")
+                       .cache()
+
     val knows  = spark.read.format("csv").option("header", "true").option("delimiter", "|").option("inferschema", "true").
                        load(datadir + "/knows.*csv.*")
     val loc_df = person.select("personId", "locatedIn").cache()
 
+    //Ensure the same city
     val knows1 = knows.join(loc_df.withColumnRenamed("locatedIn", "ploc"),    "personId")
-.join(loc_df.withColumnRenamed("locatedIn", "floc")
-            .withColumnRenamed("personId", "friendId"), "friendId")
-.filter($"ploc" === $"floc")
-.select("personId", "friendId")
+                      .join(loc_df.withColumnRenamed("locatedIn", "floc")
+                                  .withColumnRenamed("personId", "friendId"), "friendId")
+                      .filter($"ploc" === $"floc")
+                      .select("personId", "friendId")
 
-knows1.write.format("parquet").mode("overwrite").save(datadir + "/knows_kk.parquet")
+    val knows2 = nknow1.join(nknows.withColumnRenamed("friendId", "validation")
+                                   .withColumnRenamed("personId", "friendId"), "friendId")
+                       .filter($"personId" === $"validation")
+                       .select("personId", "friendId")
+
+    knows2.write.format("parquet").mode("overwrite").save(datadir + "/knows_kk.parquet")
 
     person.write.format("parquet").mode("overwrite").save(datadir + "/person_kk.parquet")
     
@@ -22,17 +37,6 @@ knows1.write.format("parquet").mode("overwrite").save(datadir + "/knows_kk.parqu
                        load(datadir + "/interest.*csv.*").cache()
     
     interest.write.format("parquet").mode("overwrite").save(datadir + "/interest_kk.parquet")
-    
-//     val knows    = spark.read.format("csv").option("header", "true").option("delimiter", "|").option("inferschema", "true").
-//                        load(datadir + "/knows.*csv.*").cache()
-    
-//     knows.write.format("parquet").save(datadir + "/knows1.parquet")
-    
-//     val knows    = spark.read.format("csv").option("header", "true").option("delimiter", "|").option("inferschema", "true").
-//                        load(datadir + "/knows.*csv.*").cache()
-    
-//     knows.write.format("parquet").save(datadir + "/knows1.parquet")
-    
 
   val t1 = System.nanoTime()
   println("reorg time: " + (t1 - t0)/1000000 + "ms")
@@ -41,13 +45,6 @@ knows1.write.format("parquet").mode("overwrite").save(datadir + "/knows_kk.parqu
 def cruncher(datadir :String, a1 :Int, a2 :Int, a3 :Int, a4 :Int, lo :Int, hi :Int) :org.apache.spark.sql.DataFrame =
 {
    val t0 = System.nanoTime()
-
-  // load the three tables
-//   val person   = spark.read.parquet(datadir + "/person.*parquet*")
-    
-//   val interest = spark.read.parquet(datadir + "/interest.*parquet*")
-    
-//   val knows    = spark.read.parquet(datadir + "/knows.*parquet*")
     
 val person   = spark.read.format("parquet").option("header", "true").option("delimiter", "|").option("inferschema", "true").
                    load(datadir + "/person_kk.parquet")
@@ -64,12 +61,11 @@ val interest = spark.read.format("parquet").option("header", "true").option("del
 
   // compute person score (#relevant interests): join with focus, groupby & aggregate. Note: nofan=true iff person does not like a1
   val scores   = person.join(focus, "personId").
-                        groupBy("personId", "locatedIn", "birthday").
+                        groupBy("personId", "locatedIn", "bday").
                         agg(count("personId") as "score", min("nofan") as "nofan")
 
   // filter (personId, score, locatedIn) tuples with score>1, being nofan, and having the right birthdate
-  val cands    = scores.filter($"score" > 0 && $"nofan").
-                        withColumn("bday", month($"birthday")*100 + dayofmonth($"birthday")).
+  val cands    = scores.filter($"score" > 0 && $"nofan")
                         filter($"bday" >= lo && $"bday" <= hi)
 
   // create (personId, ploc, friendId, score) pairs by joining with knows (and renaming locatedIn into ploc)
