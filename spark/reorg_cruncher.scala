@@ -1,3 +1,5 @@
+import org.apache.spark.sql.types.ByteType
+import org.apache.spark.sql.types.ShortType
 def reorg(datadir :String) 
 {
   val t0 = System.nanoTime()
@@ -10,6 +12,7 @@ def reorg(datadir :String)
                        .drop("creationDate")
                        .drop("locationIP")
                        .drop("browserUsed")
+                      //  .withColumn("bday", (month($"birthday")*100 + dayofmonth($"birthday")).cast(ByteType))
                        .withColumn("bday", (month($"birthday")*100 + dayofmonth($"birthday")).cast(ShortType))
                        .drop("birthday")
                        .cache()
