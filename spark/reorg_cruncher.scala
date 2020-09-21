@@ -24,7 +24,7 @@ def reorg(datadir :String)
                       .filter($"ploc" === $"floc")
                       .select("personId", "friendId")
 
-    val knows2 = nknow1.join(nknows.withColumnRenamed("friendId", "validation")
+    val knows2 = knows1.join(knows1.withColumnRenamed("friendId", "validation")
                                    .withColumnRenamed("personId", "friendId"), "friendId")
                        .filter($"personId" === $"validation")
                        .select("personId", "friendId")
