@@ -17,21 +17,29 @@ def reorg(datadir :String)
                        load(datadir + "/knows.*csv.*")
     val loc_df = person.select("personId", "locatedIn").cache()
 
+    println("REORG: ENSURE THE SAME CITY")
     //Ensure the same city
     val knows1 = knows.join(loc_df.withColumnRenamed("locatedIn", "ploc"),    "personId")
                       .join(loc_df.withColumnRenamed("locatedIn", "floc")
                                   .withColumnRenamed("personId", "friendId"), "friendId")
                       .filter($"ploc" === $"floc")
                       .select("personId", "friendId")
-
+    println("REORG: ENSURE MUTUAL FRIEND")
+    //Ensure mutual friend
     val knows2 = knows1.join(knows1.withColumnRenamed("friendId", "validation")
                                    .withColumnRenamed("personId", "friendId"), "friendId")
                        .filter($"personId" === $"validation")
                        .select("personId", "friendId")
 
     knows2.write.format("parquet").mode("overwrite").save(datadir + "/knows_kk.parquet")
+    //Get friend list
+    val person_list = knows2.select("personId").dropDuplicates("personId")
+    person_list.cache()
 
-    person.write.format("parquet").mode("overwrite").save(datadir + "/person_kk.parquet")
+    //Remove none-useful person
+    person.join(person_list, "personId").write.format("parquet").mode("overwrite").save(datadir + "/person_kk.parquet")
+
+    // person.write.format("parquet").mode("overwrite").save(datadir + "/person_kk.parquet")
     
     val interest = spark.read.format("csv").option("header", "true").option("delimiter", "|").option("inferschema", "true").
                        load(datadir + "/interest.*csv.*").cache()
@@ -65,7 +73,7 @@ val interest = spark.read.format("parquet").option("header", "true").option("del
                         agg(count("personId") as "score", min("nofan") as "nofan")
 
   // filter (personId, score, locatedIn) tuples with score>1, being nofan, and having the right birthdate
-  val cands    = scores.filter($"score" > 0 && $"nofan")
+  val cands    = scores.filter($"score" > 0 && $"nofan").
                         filter($"bday" >= lo && $"bday" <= hi)
 
   // create (personId, ploc, friendId, score) pairs by joining with knows (and renaming locatedIn into ploc)
