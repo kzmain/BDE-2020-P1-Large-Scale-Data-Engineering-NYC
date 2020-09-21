@@ -43,7 +43,7 @@ def reorg(datadir :String)
 
     //Remove none-useful person
     println("REORG: REMOVE NONE_USEFULE PERSON")
-    person.join(person_list, "personId").partitionBy("month").write.format("parquet").mode("overwrite").save(datadir + "/person_kk.parquet")
+    person.join(person_list, "personId").write.partitionBy("month").format("parquet").mode("overwrite").save(datadir + "/person_kk.parquet")
     
     val interest = spark.read.format("csv").option("header", "true").option("delimiter", "|").option("inferschema", "true").
                        load(datadir + "/interest.*csv.*").cache()
