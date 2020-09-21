@@ -49,7 +49,7 @@ def reorg(datadir :String)
                        load(datadir + "/interest.*csv.*").cache()
  
     println("REORG: REMOVE NONE_USEFULE INTEREST")                   
-    interest.join(person_list, "personId").
+    interest.join(person_list, "personId")
                       .groupBy("interest")
                       .agg(collect_list("personId").as("personId"))
                       .write.format("parquet").mode("overwrite").save(datadir + "/interest_kk.parquet")
