@@ -36,7 +36,7 @@ def reorg(datadir :String)
                        .select("personId", "friendId")
 
     knows2
-    .orderBy(asc("personId"), asc("friendId"))
+    .orderBy(asc("personId"))
     .write.format("parquet").mode("overwrite").save(datadir + "/knows_kk.parquet")
     
     //Get friend list
@@ -48,7 +48,7 @@ def reorg(datadir :String)
     println("REORG: REMOVE NONE_USEFULE PERSON")
     person
     .join(person_list, "personId").drop("locatedIn")
-    .orderBy(asc("personId"), asc("bday"))
+    .orderBy(asc("personId"))
     .write.format("parquet").mode("overwrite").save(datadir + "/person_kk.parquet")
     
     val interest = spark.read.format("csv").option("header", "true").option("delimiter", "|").option("inferschema", "true").
@@ -56,7 +56,7 @@ def reorg(datadir :String)
     //Remove none-useful interests
     println("REORG: REMOVE NONE_USEFULE INTEREST")                   
     interest.join(person_list, "personId")
-    .orderBy(asc("personId"), asc("interest"))
+    .orderBy(asc("personId"))
     .write.format("parquet").mode("overwrite").save(datadir + "/interest_kk.parquet")
 
   val t1 = System.nanoTime()
@@ -95,7 +95,7 @@ val ret = knows3.join(score, "personId").orderBy(desc("score"), asc("personId"),
 .withColumnRenamed("personId", "p")
 .withColumnRenamed("friendId", "f")
 
-  ret.show(1000) // force execution now, and display results to stdout
+  // ret.show(1000) // force execution now, and display results to stdout
 
   val t1 = System.nanoTime()
   println("cruncher time: " + (t1 - t0)/1000000 + "ms")
