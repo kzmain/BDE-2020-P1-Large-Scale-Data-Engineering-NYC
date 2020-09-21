@@ -50,7 +50,7 @@ def reorg(datadir :String)
     
     // .orderBy(asc("personId"))
     // .write.format("parquet").mode("overwrite").save(datadir + "/person_kk.parquet")
-    person.drop("locatedIn").join(knows2, "personId").save(datadir + "/person_kk.parquet")
+    person.drop("locatedIn").join(knows2, "personId").format("parquet").mode("overwrite").save(datadir + "/person_kk.parquet")
 
     val interest = spark.read.format("csv").option("header", "true").option("delimiter", "|").option("inferschema", "true").
                        load(datadir + "/interest.*csv.*").cache()
