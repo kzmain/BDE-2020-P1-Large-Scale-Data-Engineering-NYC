@@ -52,12 +52,12 @@ def reorg(datadir :String)
     // .write.format("parquet").mode("overwrite").save(datadir + "/person_kk.parquet")
     person.drop("locatedIn").join(knows2, "personId").write.format("parquet").mode("overwrite").save(datadir + "/person_kk.parquet")
 
-    val interest = spark.read.format("csv").option("header", "true").option("delimiter", "|").option("inferschema", "true").
-                       load(datadir + "/interest.*csv.*").cache()
     //Remove none-useful interests
-    println("REORG: REMOVE NONE_USEFULE INTEREST")                   
+    println("REORG: REMOVE NONE_USEFULE INTEREST")   
+    val interest = spark.read.format("csv").option("header", "true").option("delimiter", "|").option("inferschema", "true").
+                       load(datadir + "/interest.*csv.*").cache()                
     interest
-    // .join(person_list, "personId")
+    .join(knows2.select("personId"), "personId")
     .groupBy("interest")
     .agg(collect_list("personId").as("personId"))
     // .orderBy(asc("personId"))
