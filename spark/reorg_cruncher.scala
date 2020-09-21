@@ -1,5 +1,11 @@
 import org.apache.spark.sql.types.ByteType
 import org.apache.spark.sql.types.ShortType
+
+var tknows = spark.emptyDataFrame
+var tperson = spark.emptyDataFrame
+var tinterest = spark.emptyDataFrame
+var first = true
+
 def reorg(datadir :String) 
 {
   val t0 = System.nanoTime()
@@ -61,27 +67,29 @@ def reorg(datadir :String)
 def cruncher(datadir :String, a1 :Int, a2 :Int, a3 :Int, a4 :Int, lo :Int, hi :Int) :org.apache.spark.sql.DataFrame =
 {
   val t0 = System.nanoTime()
-    
-  val person   = spark.read.format("parquet").option("header", "true").option("delimiter", "|").option("inferschema", "true").
-                   load(datadir + "/person_kk.parquet").cache()
-
-  val interest = spark.read.format("parquet").option("header", "true").option("delimiter", "|").option("inferschema", "true").
-                   load(datadir + "/interest_kk.parquet").cache()
-    
-  val knows    = spark.read.format("parquet").option("header", "true").option("delimiter", "|").option("inferschema", "true").
-                       load(datadir + "/knows_kk.parquet").cache()
   
-  val focus    = interest.filter($"interest" isin (a1, a2, a3, a4))
+  if(first){
+    tperson   = spark.read.format("parquet").option("header", "true").option("delimiter", "|").option("inferschema", "true").
+                   load(datadir + "/person_kk.parquet").cache()
+    tinterest = spark.read.format("parquet").option("header", "true").option("delimiter", "|").option("inferschema", "true").
+                   load(datadir + "/interest_kk.parquet").cache()
+    tknows    = spark.read.format("parquet").option("header", "true").option("delimiter", "|").option("inferschema", "true").
+                       load(datadir + "/knows_kk.parquet").cache()
+    first = false
+  }
+  
+  
+  val focus    = tinterest.filter($"interest" isin (a1, a2, a3, a4))
                           .withColumn("personId", explode($"personId"))
                           .withColumn("nofan", $"interest".notEqual(a1))
                           .groupBy("personId")
                           .agg(count("personId") as "score", min("nofan") as "nofan")
 
-  val birth_pid = person.filter($"bday" >= lo && $"bday" <= hi).select("personId")
+  val birth_pid = tperson.filter($"bday" >= lo && $"bday" <= hi).select("personId")
   val nofan     = focus.select("personId","nofan")
   val score     = focus.select("personId","score")
   
-  val knows1 = knows.join(birth_pid, "personId")
+  val knows1 = tknows.join(birth_pid, "personId")
   val knows2 = knows1.join(nofan.withColumnRenamed("personId", "friendId"), "friendId").filter($"nofan" === lit(false))
 .drop("nofan")
   val knows3 = knows2.join(nofan, "personId").filter("nofan").drop("nofan")
