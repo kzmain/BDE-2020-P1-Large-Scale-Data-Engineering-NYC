@@ -78,13 +78,14 @@ def cruncher(datadir :String, a1 :Int, a2 :Int, a3 :Int, a4 :Int, lo :Int, hi :I
   val nofan     = focus.select("personId","nofan")
   val score     = focus.select("personId","score")
   
-  val knows1 = knows.join(birth_pid, "personId")
-  val knows2 = knows1.join(nofan.withColumnRenamed("personId", "friendId"), "friendId").filter($"nofan" === lit(false))
+  val knows1 = knows.join(nofan.withColumnRenamed("personId", "friendId"), "friendId").filter($"nofan" === lit(false))
 .drop("nofan")
+  val knows2 = knows1.join(birth_pid, "personId")
+//   val knows2 = knows1.join(nofan.withColumnRenamed("personId", "friendId"), "friendId").filter($"nofan" === lit(false))
+// .drop("nofan")
   val knows3 = knows2.join(nofan, "personId").filter("nofan").drop("nofan")
   
-
-val ret = knows3.join(score, "personId").orderBy(desc("score"), asc("personId"), asc("friendId"))
+  val ret = knows3.join(score, "personId").orderBy(desc("score"), asc("personId"), asc("friendId"))
 .withColumnRenamed("personId", "p")
 .withColumnRenamed("friendId", "f")
 
