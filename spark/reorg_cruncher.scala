@@ -44,15 +44,11 @@ def reorg(datadir :String)
     println("REORG: REMOVE NONE_USEFULE PERSON")
     person.join(person_list, "personId").write.format("parquet").mode("overwrite").save(datadir + "/person_kk.parquet")
     
-    //Remove none-useful interests 
     val interest = spark.read.format("csv").option("header", "true").option("delimiter", "|").option("inferschema", "true").
                        load(datadir + "/interest.*csv.*").cache()
- 
+    //Remove none-useful interests
     println("REORG: REMOVE NONE_USEFULE INTEREST")                   
-    interest.join(person_list, "personId")
-                      .groupBy("interest")
-                      .agg(collect_list("personId").as("personId"))
-                      .write.format("parquet").mode("overwrite").save(datadir + "/interest_kk.parquet")
+    interest.join(person_list, "personId").write.format("parquet").mode("overwrite").save(datadir + "/interest_kk.parquet")
 
   val t1 = System.nanoTime()
   println("reorg time: " + (t1 - t0)/1000000 + "ms")
@@ -73,7 +69,6 @@ val interest = spark.read.format("parquet").option("header", "true").option("del
   
   val focus    = interest.filter($"interest" isin (a1, a2, a3, a4)).
                           withColumn("nofan", $"interest".notEqual(a1))
-                          .withColumn("personId", explode($"personId"))
                           .groupBy("personId")
                           .agg(count("personId") as "score", min("nofan") as "nofan")
 
