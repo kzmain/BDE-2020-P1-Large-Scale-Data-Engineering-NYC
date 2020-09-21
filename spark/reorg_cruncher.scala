@@ -45,7 +45,9 @@ def reorg(datadir :String)
     person.join(person_list, "personId").write.format("parquet").mode("overwrite").save(datadir + "/person_kk.parquet")
     
     val interest = spark.read.format("csv").option("header", "true").option("delimiter", "|").option("inferschema", "true").
-                       load(datadir + "/interest.*csv.*").cache()
+                       load(datadir + "/interest.*csv.*")
+                      .groupBy("interest")
+                      .agg(collect_list("personId").as("personId")).cache()
     //Remove none-useful interests
     println("REORG: REMOVE NONE_USEFULE INTEREST")                   
     interest.join(person_list, "personId").write.format("parquet").mode("overwrite").save(datadir + "/interest_kk.parquet")
@@ -69,6 +71,7 @@ val interest = spark.read.format("parquet").option("header", "true").option("del
   
   val focus    = interest.filter($"interest" isin (a1, a2, a3, a4)).
                           withColumn("nofan", $"interest".notEqual(a1))
+                          .withColumn("personId", explode($"personId"))
                           .groupBy("personId")
                           .agg(count("personId") as "score", min("nofan") as "nofan")
 
