@@ -28,6 +28,11 @@ knows1.write.format("parquet").save(datadir + "/knows_kk.parquet")
     
 //     knows.write.format("parquet").save(datadir + "/knows1.parquet")
     
+//     val knows    = spark.read.format("csv").option("header", "true").option("delimiter", "|").option("inferschema", "true").
+//                        load(datadir + "/knows.*csv.*").cache()
+    
+//     knows.write.format("parquet").save(datadir + "/knows1.parquet")
+    
 
   val t1 = System.nanoTime()
   println("reorg time: " + (t1 - t0)/1000000 + "ms")
