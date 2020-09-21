@@ -44,13 +44,15 @@ def reorg(datadir :String)
     println("REORG: REMOVE NONE_USEFULE PERSON")
     person.join(person_list, "personId").write.format("parquet").mode("overwrite").save(datadir + "/person_kk.parquet")
     
+    //Remove none-useful interests 
     val interest = spark.read.format("csv").option("header", "true").option("delimiter", "|").option("inferschema", "true").
-                       load(datadir + "/interest.*csv.*")
-                      .groupBy("interest")
-                      .agg(collect_list("personId").as("personId")).cache()
-    //Remove none-useful interests
+                       load(datadir + "/interest.*csv.*").cache()
+ 
     println("REORG: REMOVE NONE_USEFULE INTEREST")                   
-    interest.join(person_list, "personId").write.format("parquet").mode("overwrite").save(datadir + "/interest_kk.parquet")
+    interest.join(person_list, "personId").
+                      .groupBy("interest")
+                      .agg(collect_list("personId").as("personId"))
+                      .write.format("parquet").mode("overwrite").save(datadir + "/interest_kk.parquet")
 
   val t1 = System.nanoTime()
   println("reorg time: " + (t1 - t0)/1000000 + "ms")
