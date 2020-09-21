@@ -43,7 +43,7 @@ def reorg(datadir :String)
     //Remove none-useful person
     println("REORG: REMOVE NONE_USEFULE PERSON")
     // person.join(person_list, "personId").write.format("parquet").mode("overwrite").save(datadir + "/person_kk.parquet")
-    person.join(knows2, "personId").write.format("parquet").mode("overwrite").save(datadir + "/person_kk.parquet")
+    person.join(knows2, "personId").drop("locatedIn").write.format("parquet").mode("overwrite").save(datadir + "/person_kk.parquet")
     
     //Remove none-useful interests 
     val interest = spark.read.format("csv").option("header", "true").option("delimiter", "|").option("inferschema", "true").
@@ -61,30 +61,24 @@ def reorg(datadir :String)
 
 def cruncher(datadir :String, a1 :Int, a2 :Int, a3 :Int, a4 :Int, lo :Int, hi :Int) :org.apache.spark.sql.DataFrame =
 {
-   val t0 = System.nanoTime()
+  val t0 = System.nanoTime()
 
   val person   = spark.read.format("parquet").option("header", "true").option("delimiter", "|").option("inferschema", "true").
                    load(datadir + "/person_kk.parquet").cache()
-
   val interest = spark.read.format("parquet").option("header", "true").option("delimiter", "|").option("inferschema", "true").
                    load(datadir + "/interest_kk.parquet").cache()
     
-  // val knows    = spark.read.format("parquet").option("header", "true").option("delimiter", "|").option("inferschema", "true").
-                      //  load(datadir + "/knows_kk.parquet").cache()
-  
   val focus    = interest.filter($"interest" isin (a1, a2, a3, a4)).
                           withColumn("nofan", $"interest".notEqual(a1))
                           // .withColumn("personId", explode($"personId"))
                           .groupBy("personId")
                           .agg(count("personId") as "score", min("nofan") as "nofan")
-
-  val knows1 = person.filter($"bday" >= lo && $"bday" <= hi)
   val nofan     = focus.select("personId","nofan")
   val score     = focus.select("personId","score")
   
-  // val knows1 = knows.join(birth_pid, "personId")
+  val knows1 = person.filter($"bday" >= lo && $"bday" <= hi).drop("bday")
   val knows2 = knows1.join(nofan, "personId").filter("nofan").drop("nofan")
-  // .withColumn("friendId", explode($"friendId"))
+  .withColumn("friendId", explode($"friendId"))
   val knows3 = knows2.join(nofan.withColumnRenamed("personId", "friendId"), "friendId").filter($"nofan" === lit(false))
 .drop("nofan")
 
