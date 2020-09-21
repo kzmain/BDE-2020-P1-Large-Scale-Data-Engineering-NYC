@@ -66,6 +66,7 @@ def cruncher(datadir :String, a1 :Int, a2 :Int, a3 :Int, a4 :Int, lo :Int, hi :I
 
   var name = ListBuffer[String]()
   var iname = ListBuffer[String]()
+  println("CRUNCHER: " + a1 + " " + a2 + " " + a3 + " "+ a4 + " " + lo + " " + hi)
   // var name = new Array[String](hm - lm + 1)
 
   for( lm <- 1 to hm){
