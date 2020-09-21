@@ -58,13 +58,13 @@ def cruncher(datadir :String, a1 :Int, a2 :Int, a3 :Int, a4 :Int, lo :Int, hi :I
   val t0 = System.nanoTime()
     
   val person   = spark.read.format("parquet").option("header", "true").option("delimiter", "|").option("inferschema", "true").
-                   load(datadir + "/person_kk.parquet")
+                   load(datadir + "/person_kk.parquet").cache()
 
   val interest = spark.read.format("parquet").option("header", "true").option("delimiter", "|").option("inferschema", "true").
-                   load(datadir + "/interest_kk.parquet")
+                   load(datadir + "/interest_kk.parquet").cache()
     
   val knows    = spark.read.format("parquet").option("header", "true").option("delimiter", "|").option("inferschema", "true").
-                       load(datadir + "/knows_kk.parquet")
+                       load(datadir + "/knows_kk.parquet").cache()
   
   val focus    = interest.filter($"interest" isin (a1, a2, a3, a4)).
                           withColumn("nofan", $"interest".notEqual(a1))
