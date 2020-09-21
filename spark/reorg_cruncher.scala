@@ -33,7 +33,7 @@ def reorg(datadir :String)
                        .filter($"personId" === $"validation")
                        .select("personId", "friendId")
 
-    knows2.write.partitionBy("month").format("parquet").mode("overwrite").save(datadir + "/knows_kk.parquet")
+    knows2.write.format("parquet").mode("overwrite").save(datadir + "/knows_kk.parquet")
     
     //Get friend list
     println("REORG: GET ALL PEOPLE LIST")
@@ -42,7 +42,7 @@ def reorg(datadir :String)
 
     //Remove none-useful person
     println("REORG: REMOVE NONE_USEFULE PERSON")
-    person.join(person_list, "personId").write.format("parquet").mode("overwrite").save(datadir + "/person_kk.parquet")
+    person.join(person_list, "personId").partitionBy("month").write.format("parquet").mode("overwrite").save(datadir + "/person_kk.parquet")
     
     val interest = spark.read.format("csv").option("header", "true").option("delimiter", "|").option("inferschema", "true").
                        load(datadir + "/interest.*csv.*").cache()
