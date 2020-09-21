@@ -31,6 +31,7 @@ def reorg(datadir :String)
                                    .withColumnRenamed("personId", "friendId"), "friendId")
                        .filter($"personId" === $"validation")
                        .select("personId", "friendId")
+                       .groupBy("personId").agg(collect_list("friendId").as("friendId"))
 
     knows2.write.format("parquet").mode("overwrite").save(datadir + "/knows_kk.parquet")
     
@@ -77,6 +78,7 @@ val interest = spark.read.format("parquet").option("header", "true").option("del
   
   val knows1 = knows.join(birth_pid, "personId")
   val knows2 = knows1.join(nofan, "personId").filter("nofan").drop("nofan")
+  .withColumn("friendId", explode($"friendId"))
   val knows3 = knows2.join(nofan.withColumnRenamed("personId", "friendId"), "friendId").filter($"nofan" === lit(false))
 .drop("nofan")
 
