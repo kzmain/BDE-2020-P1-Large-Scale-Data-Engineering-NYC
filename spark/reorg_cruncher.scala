@@ -58,10 +58,10 @@ def cruncher(datadir :String, a1 :Int, a2 :Int, a3 :Int, a4 :Int, lo :Int, hi :I
 {
    val t0 = System.nanoTime()
     
-val person   = spark.read.format("parquet").option("header", "true").option("delimiter", "|").option("inferschema", "true").
+  val person   = spark.read.format("parquet").option("header", "true").option("delimiter", "|").option("inferschema", "true").
                    load(datadir + "/person_kk.parquet").cache()
 
-val interest = spark.read.format("parquet").option("header", "true").option("delimiter", "|").option("inferschema", "true").
+  val interest = spark.read.format("parquet").option("header", "true").option("delimiter", "|").option("inferschema", "true").
                    load(datadir + "/interest_kk.parquet").cache()
     
   val knows    = spark.read.format("parquet").option("header", "true").option("delimiter", "|").option("inferschema", "true").
@@ -76,11 +76,13 @@ val interest = spark.read.format("parquet").option("header", "true").option("del
   val nofan     = focus.select("personId","nofan")
   val score     = focus.select("personId","score")
   
+
   val knows1 = knows.join(birth_pid, "personId")
-  val knows2 = knows1.join(nofan, "personId").filter("nofan").drop("nofan")
-  .withColumn("friendId", explode($"friendId"))
-  val knows3 = knows2.join(nofan.withColumnRenamed("personId", "friendId"), "friendId").filter($"nofan" === lit(false))
+  val knows2 = knows1.join(nofan.withColumnRenamed("personId", "friendId"), "friendId").filter($"nofan" === lit(false))
 .drop("nofan")
+  val knows3 = knows2.join(nofan, "personId").filter("nofan").drop("nofan")
+  .withColumn("friendId", explode($"friendId"))
+  
 
 val ret = knows3.join(score, "personId").orderBy(desc("score"), asc("personId"), asc("friendId"))
 .withColumnRenamed("personId", "p")
