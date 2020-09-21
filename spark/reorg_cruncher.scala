@@ -1,3 +1,4 @@
+import org.apache.spark.sql.functions._
 def reorg(datadir :String) 
 {
   val t0 = System.nanoTime()
@@ -57,45 +58,37 @@ def cruncher(datadir :String, a1 :Int, a2 :Int, a3 :Int, a4 :Int, lo :Int, hi :I
 {
    val t0 = System.nanoTime()
     
-val person   = spark.read.format("parquet").option("header", "true").option("delimiter", "|").option("inferschema", "true").
-                   load(datadir + "/person_kk.parquet")
+  val person   = spark.read.format("parquet").option("header", "true").option("delimiter", "|").option("inferschema", "true").
+                   load(datadir + "/person_kk.parquet").cache()
 
-val interest = spark.read.format("parquet").option("header", "true").option("delimiter", "|").option("inferschema", "true").
-                   load(datadir + "/interest_kk.parquet")
+  val interest = spark.read.format("parquet").option("header", "true").option("delimiter", "|").option("inferschema", "true").
+                   load(datadir + "/interest_kk.parquet").cache()
     
   val knows    = spark.read.format("parquet").option("header", "true").option("delimiter", "|").option("inferschema", "true").
-                       load(datadir + "/knows_kk.parquet")
+                       load(datadir + "/knows_kk.parquet").cache()
+  // Filter birthday
+  val birth_filter = person.filter($"bday" >= lo && $"bday" <= hi)
+  var knows1 = knows.join(birth_filter, "personId")
 
-  // select the relevant (personId, interest) tuples, and add a boolean column "nofan" (true iff this is not a a1 tuple)
-  val focus    = interest.filter($"interest" isin (a1, a2, a3, a4)).
-                          withColumn("nofan", $"interest".notEqual(a1))
+  // Get who like a1
+  val like_a1 = interest
+                .filter($"interest" === a1)           
+                .withColumnRenamed("personId", "pid")
+                .withColumn("fan", lit(true)).drop("interest")
+  // Filter Friend NOT like a1 
+  val knows2 = knows1.join(like_a1, knows1("friendId") === like_a1("pid"), "left_outer").filter($"fan").drop("fan").drop("pid")
+  
+  // Filter Person like a1 
+  val knows3 = knows2.join(like_a1, knows2("personId") === like_a1("pid"), "left_outer").filter($"fan".isNull).drop("fan").drop("pid")
 
-  // compute person score (#relevant interests): join with focus, groupby & aggregate. Note: nofan=true iff person does not like a1
-  val scores   = person.join(focus, "personId").
-                        groupBy("personId", "locatedIn", "bday").
-                        agg(count("personId") as "score", min("nofan") as "nofan")
+  // Get score
+  val score    = interest.filter($"interest" isin (a2, a3, a4)).groupBy("personId").agg(count("personId") as "score")
 
-  // filter (personId, score, locatedIn) tuples with score>1, being nofan, and having the right birthdate
-  val cands    = scores.filter($"score" > 0 && $"nofan").
-                        filter($"bday" >= lo && $"bday" <= hi)
-
-  // create (personId, ploc, friendId, score) pairs by joining with knows (and renaming locatedIn into ploc)
-  val pairs    = cands.select($"personId", $"locatedIn".alias("ploc"), $"score").
-                       join(knows, "personId")
-
-  // re-use the scores dataframe to create a (friendId, floc) dataframe of persons who are a fan (not nofan)
-  val fanlocs  = scores.filter(!$"nofan").select($"personId".alias("friendId"), $"locatedIn".alias("floc"))
-
-  // join the pairs to get a (personId, ploc, friendId, floc, score), and then filter on same location, and remove ploc and floc columns
-  val results  = pairs.join(fanlocs, "friendId").
-                       filter($"ploc"===$"floc").
-                       select($"personId".alias("p"), $"friendId".alias("f"), $"score")
-
-  // do the bidirectionality check by joining towards knows, and keeping only the (p, f, score) pairs where also f knows p
-  val bidir    = results.join(knows.select($"personId".alias("f"), $"friendId"), "f").filter($"p"===$"friendId")
 
   // keep only the (p, f, score) columns and sort the result
-  val ret      = bidir.select($"p", $"f", $"score").orderBy(desc("score"), asc("p"), asc("f"))
+  val ret      = knows3.join(score, "personId")
+.select($"score", $"personId".alias("p"), $"friendId".alias("f"))
+.orderBy(desc("score"), asc("p"), asc("f"))
 
   ret.show(1000) // force execution now, and display results to stdout
 
