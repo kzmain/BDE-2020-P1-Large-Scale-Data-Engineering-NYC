@@ -34,9 +34,8 @@ def reorg(datadir :String)
                                    .withColumnRenamed("personId", "friendId"), "friendId")
                        .filter($"personId" === $"validation")
                        .select("personId", "friendId")
-
-    knows2
-    // .orderBy(asc("personId"))
+    .groupBy("personId")
+    .agg(collect_list("friendId").as("friendId"))
     .write.format("parquet").mode("overwrite").save(datadir + "/knows_kk.parquet")
     
     //Get friend list
@@ -88,9 +87,10 @@ def cruncher(datadir :String, a1 :Int, a2 :Int, a3 :Int, a4 :Int, lo :Int, hi :I
   val nofan     = focus.select("personId","nofan")
   val score     = focus.select("personId","score")
   
-  val knows1 = knows.hint("broadcast").join(birth_pid, "personId")
-  val knows2 = knows1.hint("broadcast").join(nofan.withColumnRenamed("personId", "friendId"), "friendId").filter($"nofan" === lit(false)).drop("nofan")
-  val knows3 = knows2.hint("broadcast").join(nofan, "personId").filter("nofan").drop("nofan")
+  val knows1 = knows.join(birth_pid, "personId")
+  val knows2 = knows1.join(nofan, "personId").filter("nofan").drop("nofan").withColumn("friendId", explode($"friendId"))
+  val knows3 = knows2.join(nofan.withColumnRenamed("personId", "friendId"), "friendId").filter($"nofan" === lit(false)).drop("nofan")
+
   
 
 val ret = knows3.join(score, "personId").orderBy(desc("score"), asc("personId"), asc("friendId"))
