@@ -12,11 +12,10 @@ def reorg(datadir :String)
                        .drop("locationIP")
                        .drop("browserUsed")
                        .withColumn("bday", month($"birthday")*100 + dayofmonth($"birthday")).drop("birthday")
-                       .cache()
 
     val knows  = spark.read.format("csv").option("header", "true").option("delimiter", "|").option("inferschema", "true").
                        load(datadir + "/knows.*csv.*")
-    val loc_df = person.select("personId", "locatedIn").cache()
+    val loc_df = person.select("personId", "locatedIn")
 
     //Ensure the same city
      println("REORG: ENSURE THE SAME CITY")
@@ -45,7 +44,7 @@ def reorg(datadir :String)
     person.join(person_list, "personId").drop("locatedIn").write.format("parquet").mode("overwrite").save(datadir + "/person_kk.parquet")
     
     val interest = spark.read.format("csv").option("header", "true").option("delimiter", "|").option("inferschema", "true").
-                       load(datadir + "/interest.*csv.*").cache()
+                       load(datadir + "/interest.*csv.*").
     //Remove none-useful interests
     println("REORG: REMOVE NONE_USEFULE INTEREST")                   
     interest.join(person_list, "personId").write.format("parquet").mode("overwrite").save(datadir + "/interest_kk.parquet")
@@ -59,13 +58,13 @@ def cruncher(datadir :String, a1 :Int, a2 :Int, a3 :Int, a4 :Int, lo :Int, hi :I
    val t0 = System.nanoTime()
     
   val person   = spark.read.format("parquet").option("header", "true").option("delimiter", "|").option("inferschema", "true").
-                   load(datadir + "/person_kk.parquet").cache()
+                   load(datadir + "/person_kk.parquet")
 
   val interest = spark.read.format("parquet").option("header", "true").option("delimiter", "|").option("inferschema", "true").
-                   load(datadir + "/interest_kk.parquet").cache()
+                   load(datadir + "/interest_kk.parquet")
     
   val knows    = spark.read.format("parquet").option("header", "true").option("delimiter", "|").option("inferschema", "true").
-                       load(datadir + "/knows_kk.parquet").cache()
+                       load(datadir + "/knows_kk.parquet")
   // Filter birthday
   val birth_filter = person.filter($"bday" >= lo && $"bday" <= hi)
   var knows1 = knows.join(birth_filter, "personId")
