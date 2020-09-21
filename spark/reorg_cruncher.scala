@@ -1,5 +1,7 @@
 import org.apache.spark.sql.types.ByteType
 import org.apache.spark.sql.types.ShortType
+import scala.collection.mutable.ListBuffer
+
 def reorg(datadir :String) 
 {
   val t0 = System.nanoTime()
@@ -12,6 +14,7 @@ def reorg(datadir :String)
                        .drop("creationDate")
                        .drop("locationIP")
                        .drop("browserUsed")
+                       .withColumn("month", (month($"birthday")).cast(ByteType))
                        .withColumn("bday", (month($"birthday")*100 + dayofmonth($"birthday")).cast(ShortType))
                        .drop("birthday")
                        .cache()
@@ -43,8 +46,15 @@ def reorg(datadir :String)
     person_list.cache()
 
     //Remove none-useful person
-    println("REORG: REMOVE NONE_USEFULE PERSON")
-    person.join(person_list, "personId").drop("locatedIn").write.format("parquet").mode("overwrite").save(datadir + "/person_kk.parquet")
+        println("REORG: REMOVE NONE_USEFULE PERSON")
+    val np = person.join(person_list, "personId").drop("locatedIn").cache()
+
+    var lm = 1;
+    var hm = 12;
+
+  for( lm <- 1 to hm){
+         np.filter($"month" === lm).drop("month").write.format("parquet").mode("overwrite").save(datadir + "/kmonth=" + lm)
+  }
     
     val interest = spark.read.format("csv").option("header", "true").option("delimiter", "|").option("inferschema", "true").
                        load(datadir + "/interest.*csv.*").cache()
@@ -59,20 +69,30 @@ def reorg(datadir :String)
 def cruncher(datadir :String, a1 :Int, a2 :Int, a3 :Int, a4 :Int, lo :Int, hi :Int) :org.apache.spark.sql.DataFrame =
 {
   val t0 = System.nanoTime()
+
+  var lm = lo / 100;
+  var hm = hi / 100;
+
+  var name = ListBuffer[String]()
+
+  for( lm <- 1 to hm){
+         name  += datadir + "/kmonth=" + lm
+  }
+
     
   val person   = spark.read.format("parquet").option("header", "true").option("delimiter", "|").option("inferschema", "true").
-                   load(datadir + "/person_kk.parquet")
+                   load(name: _*).cache()  
 
   val interest = spark.read.format("parquet").option("header", "true").option("delimiter", "|").option("inferschema", "true").
-                   load(datadir + "/interest_kk.parquet")
+                   load(datadir + "/interest_kk.parquet").cache()
     
   val knows    = spark.read.format("parquet").option("header", "true").option("delimiter", "|").option("inferschema", "true").
-                       load(datadir + "/knows_kk.parquet")
+                       load(datadir + "/knows_kk.parquet").cache()
   
   val focus    = interest.filter($"interest" isin (a1, a2, a3, a4)).
                           withColumn("nofan", $"interest".notEqual(a1))
                           .groupBy("personId")
-                          .agg(count("personId") as "score", min("nofan") as "nofan").cache()
+                          .agg(count("personId") as "score", min("nofan") as "nofan")
 
   val birth_pid = person.filter($"bday" >= lo && $"bday" <= hi).select("personId")
   val nofan     = focus.select("personId","nofan")
