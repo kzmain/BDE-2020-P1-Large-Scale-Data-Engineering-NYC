@@ -17,34 +17,37 @@ def reorg(datadir :String)
                        load(datadir + "/knows.*csv.*")
     val loc_df = person.select("personId", "locatedIn").cache()
 
-    println("REORG: ENSURE THE SAME CITY")
     //Ensure the same city
+     println("REORG: ENSURE THE SAME CITY")
     val knows1 = knows.join(loc_df.withColumnRenamed("locatedIn", "ploc"),    "personId")
                       .join(loc_df.withColumnRenamed("locatedIn", "floc")
                                   .withColumnRenamed("personId", "friendId"), "friendId")
                       .filter($"ploc" === $"floc")
                       .select("personId", "friendId")
-    println("REORG: ENSURE MUTUAL FRIEND")
+
     //Ensure mutual friend
+    println("REORG: ENSURE MUTUAL FRIEND")
     val knows2 = knows1.join(knows1.withColumnRenamed("friendId", "validation")
                                    .withColumnRenamed("personId", "friendId"), "friendId")
                        .filter($"personId" === $"validation")
                        .select("personId", "friendId")
 
     knows2.write.format("parquet").mode("overwrite").save(datadir + "/knows_kk.parquet")
+    
     //Get friend list
+    println("REORG: GET ALL PEOPLE LIST")
     val person_list = knows2.select("personId").dropDuplicates("personId")
     person_list.cache()
 
     //Remove none-useful person
+    println("REORG: REMOVE NONE_USEFULE PERSON")
     person.join(person_list, "personId").write.format("parquet").mode("overwrite").save(datadir + "/person_kk.parquet")
-
-    // person.write.format("parquet").mode("overwrite").save(datadir + "/person_kk.parquet")
     
     val interest = spark.read.format("csv").option("header", "true").option("delimiter", "|").option("inferschema", "true").
                        load(datadir + "/interest.*csv.*").cache()
-    
-    interest.write.format("parquet").mode("overwrite").save(datadir + "/interest_kk.parquet")
+    //Remove none-useful interests
+    println("REORG: REMOVE NONE_USEFULE INTEREST")                   
+    interest.join(person_list, "personId").write.format("parquet").mode("overwrite").save(datadir + "/interest_kk.parquet")
 
   val t1 = System.nanoTime()
   println("reorg time: " + (t1 - t0)/1000000 + "ms")
