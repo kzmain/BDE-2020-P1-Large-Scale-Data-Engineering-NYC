@@ -36,7 +36,7 @@ def reorg(datadir :String)
                        .select("personId", "friendId")
 
     knows2
-    .orderBy(asc("personId"))
+    // .orderBy(asc("personId"))
     .write.format("parquet").mode("overwrite").save(datadir + "/knows_kk.parquet")
     
     //Get friend list
@@ -48,7 +48,7 @@ def reorg(datadir :String)
     println("REORG: REMOVE NONE_USEFULE PERSON")
     person
     .join(person_list, "personId").drop("locatedIn")
-    .orderBy(asc("personId"))
+    // .orderBy(asc("personId"))
     .write.format("parquet").mode("overwrite").save(datadir + "/person_kk.parquet")
     
     val interest = spark.read.format("csv").option("header", "true").option("delimiter", "|").option("inferschema", "true").
@@ -56,7 +56,9 @@ def reorg(datadir :String)
     //Remove none-useful interests
     println("REORG: REMOVE NONE_USEFULE INTEREST")                   
     interest.join(person_list, "personId")
-    .orderBy(asc("personId"))
+    .groupBy("interest")
+    .agg(collect_list("personId").as("personId"))
+    // .orderBy(asc("personId"))
     .write.format("parquet").mode("overwrite").save(datadir + "/interest_kk.parquet")
 
   val t1 = System.nanoTime()
@@ -76,18 +78,19 @@ def cruncher(datadir :String, a1 :Int, a2 :Int, a3 :Int, a4 :Int, lo :Int, hi :I
   val knows    = spark.read.format("parquet").option("header", "true").option("delimiter", "|").option("inferschema", "true").
                        load(datadir + "/knows_kk.parquet").cache()
   
-  val focus    = interest.filter($"interest" isin (a1, a2, a3, a4)).
-                          withColumn("nofan", $"interest".notEqual(a1))
+  val focus    = interest.filter($"interest" isin (a1, a2, a3, a4))
+                          .withColumn("personId", explode($"personId"))
+                          .withColumn("nofan", $"interest".notEqual(a1))
                           .groupBy("personId")
-                          .agg(count("personId") as "score", min("nofan") as "nofan").cache()
+                          .agg(count("personId") as "score", min("nofan") as "nofan")
 
   val birth_pid = person.filter($"bday" >= lo && $"bday" <= hi).select("personId")
   val nofan     = focus.select("personId","nofan")
   val score     = focus.select("personId","score")
   
-  val knows1 = knows.join(birth_pid, "personId")
-  val knows2 = knows1.join(nofan.withColumnRenamed("personId", "friendId"), "friendId").filter($"nofan" === lit(false)).drop("nofan")
-  val knows3 = knows2.join(nofan, "personId").filter("nofan").drop("nofan")
+  val knows1 = knows.hint("broadcast").join(birth_pid, "personId")
+  val knows2 = knows1.hint("broadcast").join(nofan.withColumnRenamed("personId", "friendId"), "friendId").filter($"nofan" === lit(false)).drop("nofan")
+  val knows3 = knows2.hint("broadcast").join(nofan, "personId").filter("nofan").drop("nofan")
   
 
 val ret = knows3.join(score, "personId").orderBy(desc("score"), asc("personId"), asc("friendId"))
