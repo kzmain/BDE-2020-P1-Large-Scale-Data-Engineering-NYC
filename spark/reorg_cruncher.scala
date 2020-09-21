@@ -5,6 +5,9 @@ var tknows = spark.emptyDataFrame
 var tperson = spark.emptyDataFrame
 var tinterest = spark.emptyDataFrame
 var first = true
+var ohm = 0
+var olm = 0
+var birth_pid = spark.emptyDataFrame
 
 def reorg(datadir :String) 
 {
@@ -57,7 +60,7 @@ def reorg(datadir :String)
     //Remove none-useful interests
     println("REORG: REMOVE NONE_USEFULE INTEREST")                   
     interest.join(person_list, "personId")
-    .groupBy("interest").agg(collect_list("personId").as("personId"))
+    // .groupBy("interest").agg(collect_list("personId").as("personId"))
     .write.format("parquet").mode("overwrite").save(datadir + "/interest_kk.parquet")
 
   val t1 = System.nanoTime()
@@ -69,6 +72,8 @@ def cruncher(datadir :String, a1 :Int, a2 :Int, a3 :Int, a4 :Int, lo :Int, hi :I
   val t0 = System.nanoTime()
   
   if(first){
+    println("first")
+
     tperson   = spark.read.format("parquet").option("header", "true").option("delimiter", "|").option("inferschema", "true").
                    load(datadir + "/person_kk.parquet").cache()
     tinterest = spark.read.format("parquet").option("header", "true").option("delimiter", "|").option("inferschema", "true").
@@ -80,7 +85,7 @@ def cruncher(datadir :String, a1 :Int, a2 :Int, a3 :Int, a4 :Int, lo :Int, hi :I
   
   
   val focus    = tinterest.filter($"interest" isin (a1, a2, a3, a4))
-                          .withColumn("personId", explode($"personId"))
+                          // .withColumn("personId", explode($"personId"))
                           .withColumn("nofan", $"interest".notEqual(a1))
                           .groupBy("personId")
                           .agg(count("personId") as "score", min("nofan") as "nofan")
