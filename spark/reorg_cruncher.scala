@@ -14,14 +14,14 @@ def reorg(datadir :String)
 .filter($"ploc" === $"floc")
 .select("personId", "friendId")
 
-knows1.write.format("parquet").save(datadir + "/knows_kk.parquet")
+knows1.write.format("parquet").mode("overwrite").save(datadir + "/knows_kk.parquet")
 
-    person.write.format("parquet").save(datadir + "/person_kk.parquet")
+    person.write.format("parquet").mode("overwrite").save(datadir + "/person_kk.parquet")
     
     val interest = spark.read.format("csv").option("header", "true").option("delimiter", "|").option("inferschema", "true").
                        load(datadir + "/interest.*csv.*").cache()
     
-    interest.write.format("parquet").save(datadir + "/interest_kk.parquet")
+    interest.write.format("parquet").mode("overwrite").save(datadir + "/interest_kk.parquet")
     
 //     val knows    = spark.read.format("csv").option("header", "true").option("delimiter", "|").option("inferschema", "true").
 //                        load(datadir + "/knows.*csv.*").cache()
@@ -55,7 +55,7 @@ val person   = spark.read.format("parquet").option("header", "true").option("del
 val interest = spark.read.format("parquet").option("header", "true").option("delimiter", "|").option("inferschema", "true").
                    load(datadir + "/interest_kk.parquet")
     
-  val knows    = spark.read.format("csv").option("header", "true").option("delimiter", "|").option("inferschema", "true").
+  val knows    = spark.read.format("parquet").option("header", "true").option("delimiter", "|").option("inferschema", "true").
                        load(datadir + "/knows_kk.parquet")
 
   // select the relevant (personId, interest) tuples, and add a boolean column "nofan" (true iff this is not a a1 tuple)
