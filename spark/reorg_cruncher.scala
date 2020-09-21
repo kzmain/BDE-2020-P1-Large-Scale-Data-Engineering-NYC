@@ -110,6 +110,8 @@ val ret = knows3.join(score, "personId").orderBy(desc("score"), asc("personId"),
 
   val t1 = System.nanoTime()
   println("cruncher time: " + (t1 - t0)/1000000 + "ms")
-
+  person.unpersist()
+  interest.unpersist()
+  knows.unpersist()
   return ret
 }
