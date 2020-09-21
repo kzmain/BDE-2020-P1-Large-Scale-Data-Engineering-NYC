@@ -46,10 +46,12 @@ def reorg(datadir :String)
     person.join(person_list, "personId").write.partitionBy("month").format("parquet").mode("overwrite").save(datadir + "/person_kk.parquet")
     
     val interest = spark.read.format("csv").option("header", "true").option("delimiter", "|").option("inferschema", "true").
-                       load(datadir + "/interest.*csv.*").cache()
+                       load(datadir + "/interest.*csv.*").
+                       withColumn("bucket", $"interest" % 30).
+                       cache()
     //Remove none-useful interests
     println("REORG: REMOVE NONE_USEFULE INTEREST")                   
-    interest.join(person_list, "personId").write.format("parquet").mode("overwrite").save(datadir + "/interest_kk.parquet")
+    interest.join(person_list, "personId").write.partitionBy("bucket").format("parquet").mode("overwrite").save(datadir + "/interest_kk.parquet")
 
   val t1 = System.nanoTime()
   println("reorg time: " + (t1 - t0)/1000000 + "ms")
@@ -63,17 +65,24 @@ def cruncher(datadir :String, a1 :Int, a2 :Int, a3 :Int, a4 :Int, lo :Int, hi :I
   var hm = hi / 100;
 
   var name = ListBuffer[String]()
+  var iname = ListBuffer[String]()
   // var name = new Array[String](hm - lm + 1)
 
   for( lm <- 1 to hm){
          name  += datadir + "/person_kk.parquet" + "/month=" + lm
   }
+
+  iname += datadir + "/interest_kk.parquet" + "/bucket=" + (a1 % 30)
+  iname += datadir + "/interest_kk.parquet" + "/bucket=" + (a2 % 30)
+  iname += datadir + "/interest_kk.parquet" + "/bucket=" + (a3 % 30)
+  iname += datadir + "/interest_kk.parquet" + "/bucket=" + (a4 % 30)
     
   val person   = spark.read.format("parquet").option("header", "true").option("delimiter", "|").option("inferschema", "true").
                    load(name: _*).cache() 
 
   val interest = spark.read.format("parquet").option("header", "true").option("delimiter", "|").option("inferschema", "true").
-                   load(datadir + "/interest_kk.parquet").cache()
+                  //  load(datadir + "/interest_kk.parquet").cache()
+                  load(iname: _*).cache() 
     
   val knows    = spark.read.format("parquet").option("header", "true").option("delimiter", "|").option("inferschema", "true").
                        load(datadir + "/knows_kk.parquet").cache()
