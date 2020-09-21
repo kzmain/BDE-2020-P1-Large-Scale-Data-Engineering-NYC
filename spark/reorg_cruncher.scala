@@ -57,7 +57,7 @@ def reorg(datadir :String)
     val interest = spark.read.format("csv").option("header", "true").option("delimiter", "|").option("inferschema", "true").
                        load(datadir + "/interest.*csv.*").cache()                
     interest
-    .join(knows2.select("personId"), "personId")
+    // .join(knows2.select("personId"), "personId")
     .groupBy("interest")
     .agg(collect_list("personId").as("personId"))
     // .orderBy(asc("personId"))
@@ -92,9 +92,9 @@ def cruncher(datadir :String, a1 :Int, a2 :Int, a3 :Int, a4 :Int, lo :Int, hi :I
   val nofan     = focus.select("personId","nofan")
   val score     = focus.select("personId","score")
   
-  val knows1 = person.filter($"bday" >= lo && $"bday" <= hi).drop("bday")
-  val knows2 = knows1.join(nofan, "personId").filter("nofan").drop("nofan").withColumn("friendId", explode($"friendId"))
-  val knows3 = knows2.join(nofan.withColumnRenamed("personId", "friendId"), "friendId").filter($"nofan" === lit(false)).drop("nofan")
+  val knows1 = person.filter($"bday" >= lo && $"bday" <= hi).drop("bday").withColumn("friendId", explode($"friendId"))
+  val knows2 = knows1.join(nofan.withColumnRenamed("personId", "friendId"), "friendId").filter($"nofan" === lit(false)).drop("nofan")
+  val knows3 = knows2.join(nofan, "personId").filter("nofan").drop("nofan")
 
   
 
