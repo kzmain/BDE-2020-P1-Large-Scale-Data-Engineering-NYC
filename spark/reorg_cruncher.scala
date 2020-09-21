@@ -72,14 +72,12 @@ def cruncher(datadir :String, a1 :Int, a2 :Int, a3 :Int, a4 :Int, lo :Int, hi :I
   val focus    = interest.filter($"interest" isin (a1, a2, a3, a4)).
                           withColumn("nofan", $"interest".notEqual(a1))
                           .groupBy("personId")
-                          .agg(count("personId") as "score", min("nofan") as "nofan").cache()
+                          .agg(count("personId") as "score", min("nofan") as "nofan")
 
-  val birth_pid = person.filter($"bday" >= lo && $"bday" <= hi).select("personId").cache()
-  val nofan     = focus.select("personId","nofan").cache()
-  val score     = focus.select("personId","score").cache()
+  val birth_pid = person.filter($"bday" >= lo && $"bday" <= hi).select("personId")
+  val nofan     = focus.select("personId","nofan")
+  val score     = focus.select("personId","score")
   
-//   val knows1 = knows.join(nofan.withColumnRenamed("personId", "friendId"), "friendId").filter($"nofan" === lit(false))
-// .drop("nofan")
   val knows1 = knows.join(birth_pid, "personId")
   val knows2 = knows1.join(nofan.withColumnRenamed("personId", "friendId"), "friendId").filter($"nofan" === lit(false))
 .drop("nofan")
@@ -88,7 +86,7 @@ def cruncher(datadir :String, a1 :Int, a2 :Int, a3 :Int, a4 :Int, lo :Int, hi :I
 
 val ret = knows3.join(score, "personId").orderBy(desc("score"), asc("personId"), asc("friendId"))
 .withColumnRenamed("personId", "p")
-.withColumnRenamed("friendId", "f").cache()
+.withColumnRenamed("friendId", "f")
 
   ret.show(1000) // force execution now, and display results to stdout
 
