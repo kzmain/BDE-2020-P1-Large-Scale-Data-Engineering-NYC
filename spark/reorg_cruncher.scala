@@ -42,7 +42,7 @@ def reorg(datadir :String)
 
     //Remove none-useful person
     println("REORG: REMOVE NONE_USEFULE PERSON")
-    person.join(person_list, "personId").write.format("parquet").mode("overwrite").save(datadir + "/person_kk.parquet")
+    person.join(person_list, "personId").drop("locatedIn").write.format("parquet").mode("overwrite").save(datadir + "/person_kk.parquet")
     
     val interest = spark.read.format("csv").option("header", "true").option("delimiter", "|").option("inferschema", "true").
                        load(datadir + "/interest.*csv.*").cache()
@@ -78,7 +78,7 @@ def cruncher(datadir :String, a1 :Int, a2 :Int, a3 :Int, a4 :Int, lo :Int, hi :I
   // Filter Friend NOT like a1 
   val knows2 = knows1.join(like_a1, knows1("friendId") === like_a1("pid"), "left_outer").filter($"fan").drop("fan").drop("pid")
   
-  // Filter Person like a1 
+    // Filter Person like a1 
   val knows3 = knows2.join(like_a1, knows2("personId") === like_a1("pid"), "left_outer").filter($"fan".isNull).drop("fan").drop("pid")
 
   // Get score
