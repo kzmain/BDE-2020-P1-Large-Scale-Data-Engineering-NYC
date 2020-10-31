@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Route</title>
+    <style>
+        /* Always set the map height explicitly to define the size of the div
+         * element that contains the map. */
+        #map {
+            height: 100%;
+        }
+
+        /* Optional: Makes the sample page fill the window. */
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+    </style>
+</head>
+<body>
+
+<div id="map"></div>
+<script>
+    let route = {
+        "9":
+            {
+                "routes": [[-73.9911207, 40.7503112], [-73.991563, 40.749706], [-73.992006, 40.749101], [-73.9948451, 40.7502936], [-73.997716, 40.7515002]],
+                "c_meter": [76.921, 76.931, 273.465, 276.558],
+                "probability": 1.0,
+                "earn": 12.6242543576,
+                "tip": 0.8891091026,
+                "distance": 2.508779858,
+                "duration": 856.0535829521
+            },
+        "10": {
+            "routes": [[-73.9911207, 40.7503112], [-73.991563, 40.749706], [-73.992006, 40.749101], [-73.9948451, 40.7502936], [-73.9939536, 40.7515176], [-73.9934596, 40.7521959]],
+            "c_meter": [76.921, 76.931, 273.465, 155.446, 86.141],
+            "probability": 1.0,
+            "earn": 12.6242543576,
+            "tip": 0.8891091026,
+            "distance": 2.508779858,
+            "duration": 856.0535829521
+        },
+        "11": {
+            "routes": [[-73.9911207, 40.7503112], [-73.991563, 40.749706], [-73.992006, 40.749101], [-73.9948451, 40.7502936], [-73.9939536, 40.7515176], [-73.9922292, 40.7507832]],
+            "c_meter": [76.921, 76.931, 273.465, 155.446, 166.637],
+            "probability": 1.0,
+            "earn": 12.6242543576,
+            "tip": 0.8891091026,
+            "distance": 2.508779858,
+            "duration": 856.0535829521
+        }
+    }
+    for ([k, v] of Object.entries(route)) {
+        let _r = []
+        let r = v["routes"]
+        for (let i = 0; i < r.length; i++) {
+            _r.push({lng: r[i][0], lat: r[i][1]})
+        }
+        route[k]["routes"] = _r
+    }
+
+
+    function initMap(listener) {
+        let map = new google.maps.Map(document.getElementById("map"), {
+            zoom: 13,
+            center: {lat: 40.6861775, lng: -73.9842487},
+        });
+
+
+
+        var marker = null
+        function placeMarker(position, map) {
+            marker = new google.maps.Marker({
+                position: position,
+                map: map
+            });
+            map.panTo(position);
+        }
+
+        infowindow = new google.maps.InfoWindow;
+
+
+  map.addListener('rightclick', function(e) {
+    if (marker != null){
+                marker.setMap(null);
+            }
+            placeMarker(e.latLng, map);
+    map.setCenter(e.latLng);
+    marker.setPosition(e.latLng);
+    infowindow.setContent("Latitude: " + e.latLng.lat() +
+      "<br>" + "Longitude: " + e.latLng.lng());
+    infowindow.open(map, marker);
+  });
+
+        let colors = ['#0fc', '#daaaee', '#ab542b']
+        let weights = [10.0, 5.0, 2.5]
+
+        let ind9 = "9"
+        let path9 = new google.maps.Polyline({
+            path: route[ind9]["routes"],
+            geodesic: true,
+            strokeColor: colors[0],
+            strokeOpacity: 1.0,
+            strokeWeight: weights[0],
+        });
+        path9.setMap(map);
+
+        let ind10 = "10"
+        let path10 = new google.maps.Polyline({
+            path: route[ind10]["routes"],
+            geodesic: true,
+            strokeColor: colors[1],
+            strokeOpacity: 1.0,
+            strokeWeight: weights[1],
+        });
+        path10.setMap(map);
+
+        let ind11 = "11"
+        let path11 = new google.maps.Polyline({
+            path: route[ind11]["routes"],
+            geodesic: true,
+            strokeColor: colors[2],
+            strokeOpacity: 1.0,
+            strokeWeight: weights[2],
+        });
+        path11.setMap(map);
+
+        var infoWindow = new google.maps.InfoWindow();
+        google.maps.event.addListener(path11, 'mouseover', function (e) {
+            infoWindow.setPosition(e.latLng);
+            infoWindow.setContent("You are at " + e.latLng);
+            infoWindow.open(map);
+        });
+
+// assuming you want the InfoWindow to close on mouseout
+        google.maps.event.addListener(path11, 'mouseout', function () {
+            infoWindow.close();
+        });
+
+        // var marker = null
+        // function placeMarker(position, map) {
+        //     marker = new google.maps.Marker({
+        //         position: position,
+        //         map: map
+        //     });
+        //     map.panTo(position);
+        // }
+
+        // google.maps.event.addListener(map, 'click', function (e) {
+        //     if (marker != null){
+        //         marker.setMap(null);
+        //     }
+        //     placeMarker(e.latLng, map);
+        //     // alert(e.latLng.toString());
+        //     console.log(e.latLng.lat())
+        //     console.log(e.latLng.lng())
+        // });
+    }
+
+</script>
+<script async defer
+        src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBpo4t6BxgT9Z_gXPmnZPSIorxOCAUnxiI&callback=initMap"></script>
+
+</body>
+</html>
